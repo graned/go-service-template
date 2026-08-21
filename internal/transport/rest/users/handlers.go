@@ -1,18 +1,25 @@
 package users
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	domainuser "github.com/graned/go-service-template/internal/user"
 	"net/http"
 )
 
 type Handler struct {
-	service *domainuser.Service
+	service   *domainuser.Service
+	validator *validator.Validate
 }
 
-func NewHandler(service *domainuser.Service) *Handler {
+func NewHandler(
+	service *domainuser.Service,
+	validator *validator.Validate,
+) *Handler {
 	return &Handler{
-		service: service,
+		service:   service,
+		validator: validator,
 	}
 }
 
@@ -26,5 +33,28 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	var request CreateUserRequest
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&request); err != nil {
+		http.Error(
+			w,
+			"invalid request body",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if err := h.validator.Struct(request); err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 }

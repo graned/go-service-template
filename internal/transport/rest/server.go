@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 	"github.com/graned/go-service-template/internal/transport/rest/users"
 	domainuser "github.com/graned/go-service-template/internal/user"
+	"net/http"
 )
 
 type Server struct {
@@ -25,7 +25,10 @@ func New(
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 
-	usersHandlers := users.NewHandler(userService)
+	validate := validator.New(
+		validator.WithRequiredStructEnabled(),
+	)
+	usersHandlers := users.NewHandler(userService, validate)
 
 	r.Get("/health", health)
 	r.Mount("/users", users.Routes(usersHandlers))
