@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/graned/go-service-template/internal/transport/rest/users"
 	domainuser "github.com/graned/go-service-template/internal/user"
+	"log/slog"
 	"net/http"
 )
 
@@ -18,11 +19,12 @@ type Server struct {
 
 func New(
 	address string,
+	logger *slog.Logger,
 	userService *domainuser.Service,
 ) *Server {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
 	r.Use(middleware.RequestID)
+	r.Use(requestLogger(logger))
 	r.Use(middleware.Recoverer)
 
 	validate := validator.New(

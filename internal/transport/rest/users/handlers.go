@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	applogger "github.com/graned/go-service-template/internal/logger"
 	domainuser "github.com/graned/go-service-template/internal/user"
 	"net/http"
 )
@@ -34,6 +35,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var request CreateUserRequest
+
+	logger := applogger.FromContext(r.Context())
+
+	logger.InfoContext(
+		r.Context(),
+		"creating user",
+	)
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
