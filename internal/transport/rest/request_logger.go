@@ -3,7 +3,9 @@ package rest
 import (
 	"log/slog"
 	"net/http"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	applogger "github.com/graned/go-service-template/internal/logger"
@@ -15,12 +17,9 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			w http.ResponseWriter,
 			r *http.Request,
 		) {
-			requestID := middleware.GetReqID(r.Context())
+			start := time.Now()
 
-			w.Header().Set(
-				"X-Request-ID",
-				requestID,
-			)
+			requestID := middleware.GetReqID(r.Context())
 
 			requestLogger := logger.With(
 				"request_id", requestID,
@@ -31,6 +30,12 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				requestLogger,
 			)
 
+			w.Header().Set("X-Request-ID", requestID)
+
+			ww := middleware.NewWrapResponseWriter(
+				w,
+				r.ProtoMajor,
+			)
 			requestLogger.InfoContext(
 				ctx,
 				"request started",
@@ -39,8 +44,24 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			)
 
 			next.ServeHTTP(
-				w,
+				ww,
 				r.WithContext(ctx),
+			)
+
+			duration := time.Since(start)
+
+			route := chi.RouteContext(
+				r.Context(),
+			).RoutePattern()
+			requestLogger.InfoContext(
+				ctx,
+				"request completed",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"route", route,
+				"status", ww.Status(),
+				"bytes", ww.BytesWritten(),
+				"duration_ms", float64(duration)/float64(time.Millisecond),
 			)
 		})
 	}
