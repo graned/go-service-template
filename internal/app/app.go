@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 )
 
 type Component interface {
+	Name() string
 	Run() error
 	Shutdown(context.Context) error
 }
@@ -35,6 +37,11 @@ func (a *App) Run(ctx context.Context) error {
 	for _, component := range a.components {
 		go func(c Component) {
 			if err := c.Run(); err != nil {
+				a.logger.Error(
+					"application component failed",
+					"error", err,
+					"component", component.Name(),
+				)
 				errors <- err
 			}
 		}(component)
@@ -47,11 +54,6 @@ func (a *App) Run(ctx context.Context) error {
 		a.logger.Info("application shutdown requested")
 
 	case err := <-errors:
-		a.logger.Error(
-			"application component failed",
-			"error", err,
-		)
-
 		runErr = err
 	}
 
@@ -67,27 +69,30 @@ func (a *App) shutdown() {
 	)
 	defer cancel()
 
-	a.logger.Info(
-		"shutting down application",
-		"timeout", a.shutdownTimeout.String(),
-	)
-
-	errors := make(chan error, len(a.components))
+	var wg sync.WaitGroup
 
 	for _, component := range a.components {
+		wg.Add(1)
+
 		go func(c Component) {
-			errors <- c.Shutdown(ctx)
+			defer wg.Done()
+
+			a.logger.Info(
+				"Shutting down component",
+				"timeout", a.shutdownTimeout.String(),
+				"component", c.Name(),
+			)
+			if error := c.Shutdown(ctx); error != nil {
+				a.logger.Error(
+					"Component shutdown failed",
+					"error", error,
+					"component", c.Name(),
+				)
+			}
 		}(component)
 	}
 
-	for range a.components {
-		if err := <-errors; err != nil {
-			a.logger.Error(
-				"component shutdown failed",
-				"error", err,
-			)
-		}
-	}
+	wg.Wait()
 
 	a.logger.Info("application stopped")
 }

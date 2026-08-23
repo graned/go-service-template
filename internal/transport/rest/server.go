@@ -70,5 +70,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
+func (s *Server) Name() string {
+	return "rest"
+}
+
 // Enforces interface definition
 var _ app.Component = (*Server)(nil)
