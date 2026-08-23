@@ -2,6 +2,7 @@ package main
 
 import (
 	applogger "github.com/graned/go-service-template/internal/logger"
+	"github.com/graned/go-service-template/internal/transport"
 	"github.com/graned/go-service-template/internal/transport/rest"
 	"github.com/graned/go-service-template/internal/user"
 
@@ -18,12 +19,19 @@ func main() {
 
 	userService := user.NewService()
 
-	restServer := rest.New(
+	restRuntime := transport.NewRuntime(
 		":3000",
 		logger,
+	)
+
+	restServer := rest.New(
+		restRuntime,
 		userService,
 	)
 
+	servers := []transport.Server{
+		restServer,
+	}
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -32,12 +40,15 @@ func main() {
 
 	defer stop()
 
-	serverErrors := make(chan error, 1)
+	serverErrors := make(chan error, len(servers))
 
-	go func() {
-		logger.Info("Starting rest server")
-		serverErrors <- restServer.Run()
-	}()
+	for _, server := range servers {
+		go func(s transport.Server) {
+			if err := s.Run(); err != nil {
+				serverErrors <- err
+			}
+		}(server)
+	}
 
 	select {
 	case err := <-serverErrors:
@@ -58,12 +69,21 @@ func main() {
 	)
 	defer cancel()
 
-	if err := restServer.Shutdown(shutdownCtx); err != nil {
-		logger.Error(
-			"Server shutdown failed",
-			slog.Any("error", err),
-		)
-		os.Exit(1)
+	shutdownErrors := make(chan error, len(servers))
+
+	for _, server := range servers {
+		go func(s transport.Server) {
+			shutdownErrors <- server.Shutdown(shutdownCtx)
+		}(server)
 	}
-	logger.Info("Rest server stopped")
+
+	for range servers {
+		if err := <-shutdownErrors; err != nil {
+			logger.Error(
+				"Server shutdown failed",
+				"error", err,
+			)
+		}
+	}
+	logger.Info("Application stopped")
 }

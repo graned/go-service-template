@@ -3,28 +3,28 @@ package rest
 import (
 	"context"
 	"errors"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"github.com/graned/go-service-template/internal/transport"
 	"github.com/graned/go-service-template/internal/transport/rest/users"
 	domainuser "github.com/graned/go-service-template/internal/user"
-	"log/slog"
-	"net/http"
 )
 
 type Server struct {
-	logger *slog.Logger
+	transport.Runtime
 	server *http.Server
 }
 
 func New(
-	address string,
-	logger *slog.Logger,
+	runtime transport.Runtime,
 	userService *domainuser.Service,
 ) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(requestLogger(logger))
+	r.Use(requestLogger(runtime.Logger))
 	r.Use(middleware.Recoverer)
 
 	validate := validator.New(
@@ -36,9 +36,10 @@ func New(
 	r.Mount("/users", users.Routes(usersHandlers))
 
 	return &Server{
-		logger: logger,
+		Runtime: runtime,
+
 		server: &http.Server{
-			Addr:    address,
+			Addr:    runtime.Address,
 			Handler: r,
 		},
 	}
@@ -50,7 +51,7 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Run() error {
-	s.logger.Info(
+	s.Logger.Info(
 		"Rest API Server listening",
 		"address", s.server.Addr,
 	)
@@ -64,6 +65,9 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.logger.Info("Shutting down Rest API server")
+	s.Logger.Info("Shutting down Rest API server")
 	return s.server.Shutdown(ctx)
 }
+
+// Enforces interface definition
+var _ transport.Server = (*Server)(nil)
