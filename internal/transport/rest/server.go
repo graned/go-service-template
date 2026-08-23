@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"github.com/graned/go-service-template/internal/app"
 	"github.com/graned/go-service-template/internal/transport"
 	"github.com/graned/go-service-template/internal/transport/rest/users"
 	domainuser "github.com/graned/go-service-template/internal/user"
@@ -70,4 +71,4 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 // Enforces interface definition
-var _ transport.Server = (*Server)(nil)
+var _ app.Component = (*Server)(nil)
