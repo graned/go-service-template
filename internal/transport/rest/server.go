@@ -3,7 +3,6 @@ package rest
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
@@ -14,6 +13,7 @@ import (
 )
 
 type Server struct {
+	logger *slog.Logger
 	server *http.Server
 }
 
@@ -36,6 +36,7 @@ func New(
 	r.Mount("/users", users.Routes(usersHandlers))
 
 	return &Server{
+		logger: logger,
 		server: &http.Server{
 			Addr:    address,
 			Handler: r,
@@ -49,7 +50,10 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Run() error {
-	fmt.Printf("Rest API Server listening on %s\n", s.server.Addr)
+	s.logger.Info(
+		"Rest API Server listening",
+		"address", s.server.Addr,
+	)
 
 	err := s.server.ListenAndServe()
 
@@ -60,5 +64,6 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	s.logger.Info("Shutting down Rest API server")
 	return s.server.Shutdown(ctx)
 }
