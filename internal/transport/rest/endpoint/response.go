@@ -42,7 +42,7 @@ func writeSuccess(
 	)
 }
 
-func writeError(
+func WriteError(
 	w http.ResponseWriter,
 	err error,
 ) error {

@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/graned/go-service-template/internal/app"
 	"github.com/graned/go-service-template/internal/transport"
+	endpoint "github.com/graned/go-service-template/internal/transport/rest/endpoint"
 	"github.com/graned/go-service-template/internal/transport/rest/users"
 	domainuser "github.com/graned/go-service-template/internal/user"
 )
@@ -26,15 +27,17 @@ func New(
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(requestLogger(runtime.Logger))
-	r.Use(middleware.Recoverer)
 
 	validate := validator.New(
 		validator.WithRequiredStructEnabled(),
 	)
 	usersHandlers := users.NewHandler(userService)
 
+	errorHandler := endpoint.NewErrorHandler(runtime.Logger)
+
+	endpoint.RegisterErrorHandlers(r, errorHandler)
 	r.Get("/health", health)
-	r.Mount("/users", users.Routes(usersHandlers, validate))
+	r.Mount("/users", users.Routes(usersHandlers, validate, errorHandler))
 
 	return &Server{
 		Runtime: runtime,

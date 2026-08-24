@@ -36,7 +36,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				w,
 				r.ProtoMajor,
 			)
-			requestLogger.InfoContext(
+			requestLogger.DebugContext(
 				ctx,
 				"request started",
 				"method", r.Method,
@@ -53,15 +53,31 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			route := chi.RouteContext(
 				r.Context(),
 			).RoutePattern()
-			requestLogger.InfoContext(
+
+			attrs := []slog.Attr{
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.String("route", route),
+				slog.Int("status", ww.Status()),
+				slog.Int("bytes", ww.BytesWritten()),
+				slog.Float64("duration_ms", float64(duration)/float64(time.Millisecond)),
+			}
+
+			level := slog.LevelInfo
+
+			switch {
+			case ww.Status() >= 500:
+				level = slog.LevelError
+
+			case ww.Status() >= 400:
+				level = slog.LevelWarn
+			}
+
+			logger.LogAttrs(
 				ctx,
+				level,
 				"request completed",
-				"method", r.Method,
-				"path", r.URL.Path,
-				"route", route,
-				"status", ww.Status(),
-				"bytes", ww.BytesWritten(),
-				"duration_ms", float64(duration)/float64(time.Millisecond),
+				attrs...,
 			)
 		})
 	}

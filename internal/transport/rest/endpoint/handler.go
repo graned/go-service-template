@@ -2,7 +2,6 @@
 package endpoint
 
 import (
-	applogger "github.com/graned/go-service-template/internal/logger"
 	"log/slog"
 	"net/http"
 )
@@ -58,7 +57,7 @@ func ServeStream(
 		result, err := handler(r)
 
 		if err != nil {
-			_ = writeError(w, err)
+			_ = WriteError(w, err)
 			return
 		}
 
@@ -84,6 +83,7 @@ func ServeStream(
 
 // Central HTTP handler adapter
 func Serve(
+	errorHandler *ErrorHandler,
 	handler Handler,
 ) http.HandlerFunc {
 	return func(
@@ -92,32 +92,14 @@ func Serve(
 	) {
 		result, err := handler(r)
 
-		logger := applogger.FromContext(r.Context())
-
 		if err != nil {
-			logger.ErrorContext(
-				r.Context(),
-				"request handler failed",
-				"error", err,
-			)
-
-			if writeErr := writeError(w, err); writeErr != nil {
-				logger.ErrorContext(
-					r.Context(),
-					"failed to write error response",
-					"error", writeErr,
-				)
-			}
-
+			errorHandler.Handle(w, r, err)
 			return
 		}
 
 		if err := writeSuccess(w, result); err != nil {
-			logger.ErrorContext(
-				r.Context(),
-				"failed to write response",
-				"error", err,
-			)
+			errorHandler.Handle(w, r, err)
+			return
 		}
 	}
 }

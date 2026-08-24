@@ -50,6 +50,39 @@ func ApiValidationError(
 	}
 }
 
+func ApiMethodNotAllowedError(
+	cause error,
+) error {
+	return &APIError{
+		Status:  http.StatusMethodNotAllowed,
+		Code:    "method_not_allowed",
+		Message: "Method not allowed",
+		Cause:   cause,
+	}
+}
+
+func ApiRouteNotFound(
+	cause error,
+) error {
+	return &APIError{
+		Status:  http.StatusNotFound,
+		Code:    "route_not_found",
+		Message: "Route not found",
+		Cause:   cause,
+	}
+}
+
+func ApiInternalServerError(
+	cause error,
+) error {
+	return &APIError{
+		Status:  http.StatusInternalServerError,
+		Code:    "internal_server_error",
+		Message: "An unexpected error ocurred",
+		Cause:   cause,
+	}
+}
+
 var (
 	ErrBadRequest   = errors.New("bad request")
 	ErrUnauthorized = errors.New("unauthorized")
