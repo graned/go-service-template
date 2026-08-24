@@ -1,41 +1,46 @@
 package users
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/go-playground/validator/v10"
 	applogger "github.com/graned/go-service-template/internal/logger"
 	domainuser "github.com/graned/go-service-template/internal/user"
 	"net/http"
 )
 
 type Handler struct {
-	service   *domainuser.Service
-	validator *validator.Validate
+	service *domainuser.Service
 }
 
 func NewHandler(
 	service *domainuser.Service,
-	validator *validator.Validate,
 ) *Handler {
 	return &Handler{
-		service:   service,
-		validator: validator,
+		service: service,
 	}
 }
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(r *http.Request) (UserResponse, error) {
 	id := r.PathValue("id")
-	fmt.Fprint(w, "user: %s", id)
+	return UserResponse{
+		ID:        id,
+		FirstName: "Eduardo",
+		LastName:  "Anaya",
+		Email:     "eduardo@example.com",
+	}, nil
 }
 
-func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "users")
+func (h *Handler) List(r *http.Request) ([]UserResponse, error) {
+	var res []UserResponse
+
+	res = append(res, UserResponse{
+		ID:        "123",
+		FirstName: "Eduardo",
+		LastName:  "Anaya",
+		Email:     "eduardo@example.com",
+	})
+	return res, nil
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var request CreateUserRequest
-
+func (h *Handler) Create(r *http.Request, body CreateUserRequest) (UserResponse, error) {
 	logger := applogger.FromContext(r.Context())
 
 	logger.InfoContext(
@@ -43,26 +48,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		"creating user",
 	)
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-
-	if err := decoder.Decode(&request); err != nil {
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	if err := h.validator.Struct(request); err != nil {
-		http.Error(
-			w,
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
+	return UserResponse{
+		ID:        "1234",
+		FirstName: "Eduardo",
+		LastName:  "Anaya",
+		Email:     "eduardo@example.com",
+	}, nil
 }

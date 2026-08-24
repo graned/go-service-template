@@ -31,10 +31,10 @@ func New(
 	validate := validator.New(
 		validator.WithRequiredStructEnabled(),
 	)
-	usersHandlers := users.NewHandler(userService, validate)
+	usersHandlers := users.NewHandler(userService)
 
 	r.Get("/health", health)
-	r.Mount("/users", users.Routes(usersHandlers))
+	r.Mount("/users", users.Routes(usersHandlers, validate))
 
 	return &Server{
 		Runtime: runtime,
